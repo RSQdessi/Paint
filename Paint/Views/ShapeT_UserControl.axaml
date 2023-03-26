@@ -41,24 +41,5 @@
 		<Border Background="{Binding SkewTransform.Color}" Grid.Row="3" Grid.Column="1">
 			<TextBox Name="textBoxSkewTransform" Text="{Binding SkewTransform.Value}"></TextBox>
 		</Border>
-		
-		<TextBlock Grid.Row="4" Margin="0 50 0 0">Матрица для вида: </TextBlock>
-		<Grid Name="matrix" Grid.Row="4" Grid.Column="1" Margin="0 50 0 0" ColumnDefinitions="80,80" RowDefinitions="*,*,*">
-			<Border>
-				<TextBlock Text="{Binding MatrixTransform[0]}"/>
-			</Border>
-			<Border Grid.Column="1">
-				<TextBlock Text="{Binding MatrixTransform[1]}"/>
-			</Border>
-			<Border Grid.Row="1">
-				<TextBlock Text="{Binding MatrixTransform[2]}"/>
-			</Border>
-			<Border Grid.Row="1" Grid.Column="1">
-				<TextBlock Text="{Binding MatrixTransform[3]}"/>
-			</Border>
-			<Border Grid.Row="2">
-				<TextBlock Text="{Binding MatrixTransform[4]}"/>
-			</Border>
-		</Grid>
 	</Grid>
 </UserControl>
