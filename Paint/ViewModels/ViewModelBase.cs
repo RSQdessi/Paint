@@ -1,8 +1,6 @@
 ﻿using ReactiveUI;
 
-namespace Paint.ViewModels
-{
-    public class ViewModelBase : ReactiveObject
-    {
+namespace Paint.ViewModels {
+    public class ViewModelBase: ReactiveObject {
     }
 }

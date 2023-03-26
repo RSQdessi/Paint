@@ -4,18 +4,15 @@ using Avalonia.Media;
 using System.Collections.Generic;
 using static Paint.Models.Shapes.PropsN;
 
-namespace Paint.Models.Shapes
-{
-    public class Shape5_Ellipse : IShape
-    {
+namespace Paint.Models.Shapes {
+    public class Shape5_Ellipse: IShape {
         private static readonly PropsN[] props = new[] { PName, PCenterDot, PHorizDiagonal, PVertDiagonal, PColor, PThickness, PFillColor };
 
         public PropsN[] Props => props;
 
         public string Name => "Эллипс";
 
-        public Shape? Build(Mapper map)
-        {
+        public Shape? Build(Mapper map) {
             if (map.GetProp(PName) is not string @name) return null;
 
             if (map.GetProp(PCenterDot) is not SafePoint @center || !@center.Valid) return null;
@@ -34,10 +31,9 @@ namespace Paint.Models.Shapes
             int w = @width.Num;
             int h = @height.Num;
 
-            return new Ellipse
-            {
+            return new Ellipse {
                 Name = "sn_" + @name,
-                Margin = new(p.X - w / 2, p.Y - h / 2, 0, 0),
+                Margin = new(p.X - w/2, p.Y - h/2, 0, 0),
                 Width = w,
                 Height = h,
                 Stroke = new SolidColorBrush(Color.Parse(@color)),
@@ -45,8 +41,7 @@ namespace Paint.Models.Shapes
                 StrokeThickness = @thickness
             };
         }
-        public bool Load(Mapper map, Shape shape)
-        {
+        public bool Load(Mapper map, Shape shape) {
             if (shape is not Ellipse @ellipse) return false;
             if (@ellipse.Name == null || !@ellipse.Name.StartsWith("sn_")) return false;
             if (@ellipse.Stroke == null || @ellipse.Fill == null) return false;
@@ -57,38 +52,37 @@ namespace Paint.Models.Shapes
 
             map.SetProp(PName, @ellipse.Name[3..]);
 
-            short w = (short)@ellipse.Width;
-            short h = (short)@ellipse.Height;
+            short w = (short) @ellipse.Width;
+            short h = (short) @ellipse.Height;
 
-            @start.Set(new Point(@ellipse.Margin.Left + w / 2, @ellipse.Margin.Top + h / 2));
+            @start.Set(new Point(@ellipse.Margin.Left + w/2, @ellipse.Margin.Top + h/2));
             @width.Set(w);
             @height.Set(h);
 
-            map.SetProp(PColor, ((SolidColorBrush)@ellipse.Stroke).Color.ToString());
-            map.SetProp(PFillColor, ((SolidColorBrush)@ellipse.Fill).Color.ToString());
-            map.SetProp(PThickness, (int)@ellipse.StrokeThickness);
+            map.SetProp(PColor, ((SolidColorBrush) @ellipse.Stroke).Color.ToString());
+            map.SetProp(PFillColor, ((SolidColorBrush) @ellipse.Fill).Color.ToString());
+            map.SetProp(PThickness, (int) @ellipse.StrokeThickness);
 
             return true;
         }
 
-        public Dictionary<string, object?>? Export(Shape shape)
-        {
+
+
+        public Dictionary<string, object?>? Export(Shape shape) {
             if (shape is not Ellipse @ellipse) return null;
             if (@ellipse.Name == null || !@ellipse.Name.StartsWith("sn_")) return null;
 
-            return new()
-            {
+            return new() {
                 ["name"] = @ellipse.Name[3..],
                 ["margin"] = @ellipse.Margin,
-                ["width"] = (short)@ellipse.Width,
-                ["height"] = (short)@ellipse.Height,
+                ["width"] = (short) @ellipse.Width,
+                ["height"] = (short) @ellipse.Height,
                 ["stroke"] = @ellipse.Stroke,
                 ["fill"] = @ellipse.Fill,
-                ["thickness"] = (short)@ellipse.StrokeThickness
+                ["thickness"] = (short) @ellipse.StrokeThickness
             };
         }
-        public Shape? Import(Dictionary<string, object?> data)
-        {
+        public Shape? Import(Dictionary<string, object?> data) {
             if (!data.ContainsKey("name") || data["name"] is not string @name) return null;
 
             if (!data.ContainsKey("margin") || data["margin"] is not Thickness @margin) return null;
@@ -99,8 +93,7 @@ namespace Paint.Models.Shapes
             if (!data.ContainsKey("fill") || data["fill"] is not SolidColorBrush @fillColor) return null;
             if (!data.ContainsKey("thickness") || data["thickness"] is not short @thickness) return null;
 
-            return new Ellipse
-            {
+            return new Ellipse {
                 Name = "sn_" + @name,
                 Margin = @margin,
                 Width = @width,

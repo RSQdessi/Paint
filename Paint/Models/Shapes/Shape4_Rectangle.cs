@@ -4,18 +4,15 @@ using Avalonia.Media;
 using System.Collections.Generic;
 using static Paint.Models.Shapes.PropsN;
 
-namespace Paint.Models.Shapes
-{
-    public class Shape4_Rectangle : IShape
-    {
+namespace Paint.Models.Shapes {
+    public class Shape4_Rectangle: IShape {
         private static readonly PropsN[] props = new[] { PName, PStartDot, PWidth, PHeight, PColor, PThickness, PFillColor };
 
         public PropsN[] Props => props;
 
         public string Name => "Прямоугольник";
 
-        public Shape? Build(Mapper map)
-        {
+        public Shape? Build(Mapper map) {
             if (map.GetProp(PName) is not string @name) return null;
 
             if (map.GetProp(PStartDot) is not SafePoint @start || !@start.Valid) return null;
@@ -32,8 +29,7 @@ namespace Paint.Models.Shapes
 
             var p = @start.Point;
 
-            return new Rectangle
-            {
+            return new Rectangle {
                 Name = "sn_" + @name,
                 Margin = new(p.X, p.Y, 0, 0),
                 Width = @width.Num,
@@ -43,8 +39,7 @@ namespace Paint.Models.Shapes
                 StrokeThickness = @thickness
             };
         }
-        public bool Load(Mapper map, Shape shape)
-        {
+        public bool Load(Mapper map, Shape shape) {
             if (shape is not Rectangle @rect) return false;
             if (@rect.Name == null || !@rect.Name.StartsWith("sn_")) return false;
             if (@rect.Stroke == null || @rect.Fill == null) return false;
@@ -56,34 +51,33 @@ namespace Paint.Models.Shapes
             map.SetProp(PName, @rect.Name[3..]);
 
             @start.Set(new Point(@rect.Margin.Left, @rect.Margin.Top));
-            @width.Set((short)@rect.Width);
-            @height.Set((short)@rect.Height);
+            @width.Set((short) @rect.Width);
+            @height.Set((short) @rect.Height);
 
-            map.SetProp(PColor, ((SolidColorBrush)@rect.Stroke).Color.ToString());
-            map.SetProp(PFillColor, ((SolidColorBrush)@rect.Fill).Color.ToString());
-            map.SetProp(PThickness, (int)@rect.StrokeThickness);
+            map.SetProp(PColor, ((SolidColorBrush) @rect.Stroke).Color.ToString());
+            map.SetProp(PFillColor, ((SolidColorBrush) @rect.Fill).Color.ToString());
+            map.SetProp(PThickness, (int) @rect.StrokeThickness);
 
             return true;
         }
 
-        public Dictionary<string, object?>? Export(Shape shape)
-        {
+
+
+        public Dictionary<string, object?>? Export(Shape shape) {
             if (shape is not Rectangle @rect) return null;
             if (@rect.Name == null || !@rect.Name.StartsWith("sn_")) return null;
 
-            return new()
-            {
+            return new() {
                 ["name"] = @rect.Name[3..],
                 ["margin"] = @rect.Margin,
-                ["width"] = (short)@rect.Width,
-                ["height"] = (short)@rect.Height,
+                ["width"] = (short) @rect.Width,
+                ["height"] = (short) @rect.Height,
                 ["stroke"] = @rect.Stroke,
                 ["fill"] = @rect.Fill,
-                ["thickness"] = (short)@rect.StrokeThickness
+                ["thickness"] = (short) @rect.StrokeThickness
             };
         }
-        public Shape? Import(Dictionary<string, object?> data)
-        {
+        public Shape? Import(Dictionary<string, object?> data) {
             if (!data.ContainsKey("name") || data["name"] is not string @name) return null;
 
             if (!data.ContainsKey("margin") || data["margin"] is not Thickness @margin) return null;
@@ -94,8 +88,7 @@ namespace Paint.Models.Shapes
             if (!data.ContainsKey("fill") || data["fill"] is not SolidColorBrush @fillColor) return null;
             if (!data.ContainsKey("thickness") || data["thickness"] is not short @thickness) return null;
 
-            return new Rectangle
-            {
+            return new Rectangle {
                 Name = "sn_" + @name,
                 Margin = @margin,
                 Width = @width,

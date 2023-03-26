@@ -3,18 +3,15 @@ using Avalonia.Media;
 using System.Collections.Generic;
 using static Paint.Models.Shapes.PropsN;
 
-namespace Paint.Models.Shapes
-{
-    public class Shape6_CompositeFigure : IShape
-    {
+namespace Paint.Models.Shapes {
+    public class Shape6_CompositeFigure: IShape {
         private static readonly PropsN[] props = new[] { PName, PCommands, PColor, PThickness, PFillColor };
 
         public PropsN[] Props => props;
 
         public string Name => "Составная фигура";
 
-        public Shape? Build(Mapper map)
-        {
+        public Shape? Build(Mapper map) {
             if (map.GetProp(PName) is not string @name) return null;
 
             if (map.GetProp(PCommands) is not SafeGeometry @commands || !@commands.Valid) return null;
@@ -25,8 +22,7 @@ namespace Paint.Models.Shapes
 
             if (map.GetProp(PThickness) is not int @thickness) return null;
 
-            return new Path
-            {
+            return new Path {
                 Name = "sn|" + Utils.Base64Encode(@name) + "|" + Utils.Base64Encode(@commands.Value),
                 Data = @commands.Geometry,
                 Stroke = new SolidColorBrush(Color.Parse(@color)),
@@ -34,8 +30,7 @@ namespace Paint.Models.Shapes
                 StrokeThickness = @thickness
             };
         }
-        public bool Load(Mapper map, Shape shape)
-        {
+        public bool Load(Mapper map, Shape shape) {
             if (shape is not Path @path) return false;
             if (@path.Name == null || !@path.Name.StartsWith("sn|")) return false;
             if (@path.Stroke == null || @path.Fill == null) return false;
@@ -48,31 +43,30 @@ namespace Paint.Models.Shapes
 
             @commands.Set(Utils.Base64Decode(name[2]));
 
-            map.SetProp(PColor, ((SolidColorBrush)@path.Stroke).Color.ToString());
-            map.SetProp(PFillColor, ((SolidColorBrush)@path.Fill).Color.ToString());
-            map.SetProp(PThickness, (int)@path.StrokeThickness);
+            map.SetProp(PColor, ((SolidColorBrush) @path.Stroke).Color.ToString());
+            map.SetProp(PFillColor, ((SolidColorBrush) @path.Fill).Color.ToString());
+            map.SetProp(PThickness, (int) @path.StrokeThickness);
 
             return true;
         }
 
-        public Dictionary<string, object?>? Export(Shape shape)
-        {
+
+
+        public Dictionary<string, object?>? Export(Shape shape) {
             if (shape is not Path @path) return null;
             if (@path.Name == null || !@path.Name.StartsWith("sn|")) return null;
 
             var name = @path.Name.Split('|');
 
-            return new()
-            {
+            return new() {
                 ["name"] = Utils.Base64Decode(name[1]),
                 ["path"] = Utils.Base64Decode(name[2]),
                 ["stroke"] = @path.Stroke,
                 ["fill"] = @path.Fill,
-                ["thickness"] = (int)@path.StrokeThickness
+                ["thickness"] = (int) @path.StrokeThickness
             };
         }
-        public Shape? Import(Dictionary<string, object?> data)
-        {
+        public Shape? Import(Dictionary<string, object?> data) {
             if (!data.ContainsKey("name") || data["name"] is not string @name) return null;
 
             if (!data.ContainsKey("path") || data["path"] is not string @path) return null;
@@ -82,8 +76,7 @@ namespace Paint.Models.Shapes
             if (!data.ContainsKey("fill") || data["fill"] is not SolidColorBrush @fillColor) return null;
             if (!data.ContainsKey("thickness") || data["thickness"] is not short @thickness) return null;
 
-            return new Path
-            {
+            return new Path {
                 Name = "sn|" + Utils.Base64Encode(@name) + "|" + Utils.Base64Encode(commands.Value),
                 Data = commands.Geometry,
                 Stroke = @color,

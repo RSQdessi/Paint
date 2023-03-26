@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 
 namespace Paint.Views {
-    public partial class Shape6_UserControl: UserControl {
-        public Shape6_UserControl() {
+    public partial class ShapeT_UserControl: UserControl {
+        public ShapeT_UserControl() {
             InitializeComponent();
         }
     }

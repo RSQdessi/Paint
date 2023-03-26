@@ -23,22 +23,22 @@
 	
 	<Grid Margin="16" ColumnDefinitions="4*,6*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Classes="gr">
 		<TextBlock>Имя: </TextBlock>
-		<Border Background="LightBlue" Grid.Column="1">
+		<Border Background="{Binding ShapeNameColor}" Grid.Column="1">
 			<TextBox Name="textBoxName" Text="{Binding ShapeName}"/>
 		</Border>
 
 		<TextBlock Grid.Row="1">Начальная точка: </TextBlock>
-		<Border Background="LightBlue" Grid.Row="1" Grid.Column="1">
+		<Border Background="{Binding ShapeStartDot.Color}" Grid.Row="1" Grid.Column="1">
 			<TextBox Name="textBoxStart" Text="{Binding ShapeStartDot.Value}"/>
 		</Border>
 
 		<TextBlock Grid.Row="2">Ширина: </TextBlock>
-		<Border Background="LightBlue" Grid.Row="2" Grid.Column="1">
+		<Border Background="{Binding ShapeWidth.Color}" Grid.Row="2" Grid.Column="1">
 			<TextBox Name="textBoxWidth" Text="{Binding ShapeWidth.Value}"/>
 		</Border>
 
 		<TextBlock Grid.Row="3">Высота: </TextBlock>
-		<Border Background="LightBlue" Grid.Row="3" Grid.Column="1">
+		<Border Background="{Binding ShapeHeight.Color}" Grid.Row="3" Grid.Column="1">
 			<TextBox Name="textBoxHeight" Text="{Binding ShapeHeight.Value}"/>
 		</Border>
 		

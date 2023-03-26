@@ -3,19 +3,15 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
 using Paint.ViewModels;
 
-namespace Paint.Views
-{
-    public partial class MainWindow : Window
-    {
-        public MainWindow()
-        {
+namespace Paint.Views {
+    public partial class MainWindow: Window {
+        public MainWindow() {
             InitializeComponent();
             DataContext = new MainWindowViewModel(this);
         }
 
-        private void CanvasTap(object sender, RoutedEventArgs e)
-        {
-            var mwvm = (MainWindowViewModel?)DataContext;
+        private void CanvasTap(object sender, RoutedEventArgs e) {
+            var mwvm = (MainWindowViewModel?) DataContext;
             if (mwvm == null) return;
 
             var src = e.Source;

@@ -1,23 +1,27 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
-using ReactiveUI;
 using Paint.Models;
 using Paint.Views;
+using ReactiveUI;
+using System;
 using System.Collections.ObjectModel;
 using System.Reactive;
 
-namespace Paint.ViewModels
-{
-    public class MainWindowViewModel : ViewModelBase
-    {
+namespace Paint.ViewModels {
+    public class Log {
+        public static MainWindowViewModel? Mwvm { private get; set; }
+        public static void Write(string message) {
+            if (Mwvm != null) Mwvm.Logg += message;
+        }
+    }
 
-        private int _shaperN;
-        private readonly Mapper _map;
-        private readonly Canvas _canv;
-        private UserControl _content;
-        
-        private readonly UserControl[] _contentArray = new UserControl[] {
+    public class MainWindowViewModel: ViewModelBase {
+        private int shaper_n = 0;
+        private readonly Mapper map;
+        private readonly Canvas canv;
+
+        private readonly UserControl[] contentArray = new UserControl[] {
             new Shape1_UserControl(),
             new Shape2_UserControl(),
             new Shape3_UserControl(),
@@ -25,42 +29,64 @@ namespace Paint.ViewModels
             new Shape5_UserControl(),
             new Shape6_UserControl()
         };
-        private IBrush _addColor = Brushes.White;
-        public IBrush AddColor { get => _addColor; set => this.RaiseAndSetIfChanged(ref _addColor, value); }
+        private UserControl content;
+        private UserControl? sharedContent = new ShapeT_UserControl();
 
-        private void Update()
-        {
-            bool valid = _map.ValidInput();
-            bool valid2 = _map.ValidName();
+        private string log = "";
+        public string Logg { get => log; set => this.RaiseAndSetIfChanged(ref log, value + "\n"); }
 
-            AddColor = valid ? valid2 ? Brushes.Lime : Brushes.Yellow : Brushes.Pink;
-            ShapeNameColor = valid2 ? Brushes.Lime : Brushes.Yellow;
+        private bool is_enabled = true;
+        private IBrush add_color = Brushes.Gray;
+        public IBrush AddColor { get => add_color; set => this.RaiseAndSetIfChanged(ref add_color, value); }
 
-            if (_map.newName != null)
-            {
-                var name = _map.newName;
-                _map.newName = null;
+        private Shape? animated_part = null;
+        private void Update() {
+            bool valid = map.ValidInput();
+            bool valid2 = map.ValidName();
+
+            is_enabled = valid;
+
+            AddColor = valid ? valid2 ? Brushes.BlueViolet : Brushes.Yellow : Brushes.Red;
+            ShapeNameColor = valid2 ? Brushes.BlueViolet : Brushes.Yellow;
+
+            if (map.newName != null) {
+                var name = map.newName;
+                map.newName = null;
                 ShapeName = name;
             }
 
-            var select = _map.select_shaper;
-            if (select != -1)
-            {
-                _map.select_shaper = -1;
-                if (select == _shaperN) SelectedShaper = select == 0 ? 1 : 0;
+            if (animated_part != null) {
+                canv.Children.Remove(animated_part);
+                animated_part = null;
+            }
+
+            if (valid) {
+                Shape? newy = map.Create(true);
+                if (newy != null) {
+                    newy.Classes.Add("anim");
+                    canv.Children.Add(newy);
+                    animated_part = newy;
+                }
+            }
+
+            var select = map.select_shaper;
+            if (select != -1) {
+                map.select_shaper = -1;
+                if (select == shaper_n) SelectedShaper = select == 0 ? 1 : 0;
                 SelectedShaper = select;
+                SharedContent = null; 
+                SharedContent = new ShapeT_UserControl();
             }
         }
-        private static void Update(object? inst)
-        {
+        private static void Update(object? inst) {
             if (inst != null && inst is MainWindowViewModel @mwvm) @mwvm.Update();
         }
 
-        public MainWindowViewModel(MainWindow mw)
-        {
-            _content = _contentArray[0];
-            _map = new(Update, this);
-            _canv = mw.Find<Canvas>("canvas");
+        public MainWindowViewModel(MainWindow mw) {
+            Log.Mwvm = this;
+            content = contentArray[0];
+            map = new(Update, this);
+            canv = mw.Find<Canvas>("canvas");
             Update();
 
             Add = ReactiveCommand.Create<Unit, Unit>(_ => { FuncAdd(); return new Unit(); });
@@ -69,96 +95,103 @@ namespace Paint.ViewModels
             Import = ReactiveCommand.Create<string, Unit>(n => { FuncImport(n); return new Unit(); });
         }
 
-        public int SelectedShaper
-        {
-            get => _shaperN;
-            set { this.RaiseAndSetIfChanged(ref _shaperN, value); _map.ChangeFigure(value); Content = _contentArray[value]; }
+        public int SelectedShaper {
+            get => shaper_n;
+            set { this.RaiseAndSetIfChanged(ref shaper_n, value); map.ChangeFigure(value); Content = contentArray[value]; }
         }
 
-        public UserControl Content
-        {
-            get => _content;
-            set => this.RaiseAndSetIfChanged(ref _content, value);
+        public UserControl Content {
+            get => content;
+            set => this.RaiseAndSetIfChanged(ref content, value);
+        }
+        public UserControl? SharedContent {
+            get => sharedContent;
+            set => this.RaiseAndSetIfChanged(ref sharedContent, value);
         }
 
-        private void FuncAdd()
-        {
-            Shape? newy = _map.Create(false);
+        private void FuncAdd() {
+            if (!is_enabled) return;
+
+            Shape? newy = map.Create(false);
             if (newy == null) return;
 
-            _canv.Children.Add(newy);
+            canv.Children.Add(newy);
             Update();
         }
-        private void FuncClear() => _map.Clear();
-        private void FuncExport(string type)
-        {
-            if (type == "PNG")
-            {
+        private void FuncClear() => map.Clear();
+        private void FuncExport(string Type) {
+            if (Type == "PNG") {
                 ServiceVisible = false;
-                Utils.RenderToFile(_canv, "../../../Export.png");
+                if (animated_part != null) animated_part.IsVisible = false;
+
+                try {
+                    Utils.RenderToFile(canv, "../../../Export.png");
+                } catch (Exception e) {
+                    Log.Write("Ошибка экспорта PNG: " + e);
+                }
+
                 ServiceVisible = true;
-            }
-            else _map.Export(type == "XML");
+                if (animated_part != null) animated_part.IsVisible = true;
+            } else map.Export(Type == "XML");
         }
-        private void FuncImport(string type)
-        {
-            Shape[]? beginners = _map.Import(type == "XML");
+        private void FuncImport(string Type) {
+            Shape[]? beginners = map.Import(Type == "XML");
             if (beginners == null) return;
 
-            foreach (var beginner in beginners) _canv.Children.Add(beginner);
+            foreach (var beginner in beginners) canv.Children.Add(beginner);
             Update();
         }
 
+        public ReactiveCommand<Unit, Unit> Add { get; }
         public ReactiveCommand<Unit, Unit> Clear { get; }
         public ReactiveCommand<string, Unit> Export { get; }
         public ReactiveCommand<string, Unit> Import { get; }
-        public ReactiveCommand<Unit, Unit> Add { get; }
-        
 
-        public void ShapeTap(string name)
-        {
-            var item = _map.ShapeTap(name);
-            this.RaiseAndSetIfChanged(ref _curShape, item, nameof(SelectedShape));
+        public void ShapeTap(string name) {
+            var item = map.ShapeTap(name);
+            this.RaiseAndSetIfChanged(ref cur_shape, item, nameof(SelectedShape));
         }
 
-        private IBrush _nameColor = Brushes.White;
-        public string ShapeName { get => _map.shapeName; set { this.RaiseAndSetIfChanged(ref _map.shapeName, value); Update(); } }
-        public IBrush ShapeNameColor { get => _nameColor; set => this.RaiseAndSetIfChanged(ref _nameColor, value); }
+        private IBrush nameColor = Brushes.White;
+        public string ShapeName { get => map.shapeName; set { this.RaiseAndSetIfChanged(ref map.shapeName, value); Update(); } }
+        public IBrush ShapeNameColor { get => nameColor; set => this.RaiseAndSetIfChanged(ref nameColor, value); }
 
-        public string ShapeColor { get => _map.shapeColor; set { this.RaiseAndSetIfChanged(ref _map.shapeColor, value); Update(); } }
-        public string ShapeFillColor { get => _map.shapeFillColor; set { this.RaiseAndSetIfChanged(ref _map.shapeFillColor, value); Update(); } }
-        public int ShapeThickness { get => _map.shapeThickness; set { this.RaiseAndSetIfChanged(ref _map.shapeThickness, value); Update(); } }
+        public string ShapeColor { get => map.shapeColor; set { this.RaiseAndSetIfChanged(ref map.shapeColor, value); Update(); } }
+        public string ShapeFillColor { get => map.shapeFillColor; set { this.RaiseAndSetIfChanged(ref map.shapeFillColor, value); Update(); } }
+        public int ShapeThickness { get => map.shapeThickness; set { this.RaiseAndSetIfChanged(ref map.shapeThickness, value); Update(); } }
 
-        public SafeNum ShapeWidth => _map.shapeWidth;
-        public SafeNum ShapeHeight => _map.shapeHeight;
-        public SafeNum ShapeHorizDiagonal => _map.shapeHorizDiagonal;
-        public SafeNum ShapeVertDiagonal => _map.shapeVertDiagonal;
+        public SafeNum ShapeWidth => map.shapeWidth;
+        public SafeNum ShapeHeight => map.shapeHeight; 
+        public SafeNum ShapeHorizDiagonal => map.shapeHorizDiagonal;
+        public SafeNum ShapeVertDiagonal => map.shapeVertDiagonal;
 
-        public SafePoint ShapeStartDot => _map.shapeStartDot;
-        public SafePoint ShapeEndDot => _map.shapeEndDot;
-        public SafePoint ShapeCenterDot => _map.shapeCenterDot;
-        public SafePoints ShapeDots => _map.shapeDots;
+        public SafePoint ShapeStartDot => map.shapeStartDot;
+        public SafePoint ShapeEndDot => map.shapeEndDot;
+        public SafePoint ShapeCenterDot => map.shapeCenterDot;
+        public SafePoints ShapeDots => map.shapeDots;
 
-        public SafeGeometry ShapeCommands => _map.shapeCommands;
+        public SafeGeometry ShapeCommands => map.shapeCommands;
 
-        private readonly static string[] Colors = new[] {
+        public SafeNum RenderTransformAngle => map.tformer.rotateTransformAngle;
+        public SafePoint RenderTransformCenter => map.tformer.rotateTransformCenter;
+        public SafeDPoint ScaleTransform => map.tformer.scaleTransform;
+        public SafePoint SkewTransform => map.tformer.skewTransform;
+
+        private readonly static string[] colors = new[] {
             "Yellow", "Blue", "Green", "Red",
             "Orange", "Brown", "Pink", "Aqua",
-            "Lime",
             "White", "LightGray", "DarkGray", "Black"
         };
-        public static string[] ColorsArr { get => Colors; }
+        public static string[] ColorsArr { get => colors; }
+    
+        public ObservableCollection<ShapeListBoxItem> Shapes { get => map.shapes; }
 
-        public ObservableCollection<ShapeListBoxItem> Shapes { get => _map.shapes; }
+        private bool service_visible = true;
+        public bool ServiceVisible { get => service_visible; set => this.RaiseAndSetIfChanged(ref service_visible, value); }
 
-        private bool _serviceVisible = true;
-        public bool ServiceVisible { get => _serviceVisible; set => this.RaiseAndSetIfChanged(ref _serviceVisible, value); }
-
-        private ShapeListBoxItem? _curShape;
-        public ShapeListBoxItem? SelectedShape
-        {
-            get => _curShape;
-            set { this.RaiseAndSetIfChanged(ref _curShape, value); _map.Select(value); }
+        private ShapeListBoxItem? cur_shape;
+        public ShapeListBoxItem? SelectedShape { get => cur_shape;
+            set { this.RaiseAndSetIfChanged(ref cur_shape, value); map.Select(value); }
         }
     }
 }

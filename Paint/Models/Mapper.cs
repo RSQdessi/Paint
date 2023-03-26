@@ -1,7 +1,9 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Interactivity;
 using Paint.Models.Shapes;
 using Paint.ViewModels;
+using ReactiveUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,10 +11,8 @@ using System.IO;
 using System.Linq;
 using static Paint.Models.Shapes.PropsN;
 
-namespace Paint.Models
-{
-    public class Mapper
-    {
+namespace Paint.Models {
+    public class Mapper {
         public string shapeName = "Линия 1";
 
         public string shapeColor = "Blue";
@@ -32,14 +32,15 @@ namespace Paint.Models
 
         public SafeGeometry shapeCommands;
 
+        public Transformation tformer;
+
         private readonly Action<object?>? UPD;
         private readonly object? INST;
 
         public readonly ObservableCollection<ShapeListBoxItem> shapes = new();
         private readonly Dictionary<string, ShapeListBoxItem> name2shape = new();
 
-        public Mapper(Action<object?>? upd, object? inst)
-        {
+        public Mapper(Action<object?>? upd, object? inst) {
             shapeWidth = new(200, Update, this);
             shapeHeight = new(100, Update, this);
             shapeHorizDiagonal = new(100, Update, this);
@@ -52,6 +53,8 @@ namespace Paint.Models
             shapeDots = new("50,50 100,100 50,100 100,50", Update, this);
 
             shapeCommands = new("M 10 70 l 30,30 10,10 35,0 0,-35 m 50 0 l 0,-50 10,0 35,35 m 50 0 l 0,-50 10,0 35,35z m 70 0 l 0,30 30,0 5,-35z", Update, this);
+
+            tformer = new(upd, inst);
             UPD = upd;
             INST = inst;
         }
@@ -68,21 +71,18 @@ namespace Paint.Models
 
         private IShape cur_shaper = Shapers[0];
         private readonly Dictionary<string, Shape> shape_dict = new();
-        public string? newName = null;
-        public short select_shaper = -1;
+        public string? newName = null; 
+        public short select_shaper = -1; 
         private bool update_name_lock = false;
 
-        public void ChangeFigure(int n)
-        {
+        public void ChangeFigure(int n) {
             cur_shaper = Shapers[n];
             if (!update_name_lock) newName = GenName(cur_shaper.Name);
             Update();
         }
 
-        internal object GetProp(PropsN num)
-        {
-            return num switch
-            {
+        internal object GetProp(PropsN num) {
+            return num switch {
                 PName => shapeName,
                 PColor => shapeColor,
                 PFillColor => shapeFillColor,
@@ -99,59 +99,59 @@ namespace Paint.Models
                 _ => 0
             };
         }
-        internal void SetProp(PropsN num, object obj)
-        {
-            switch (num)
-            {
-                case PName: shapeName = (string)obj; break;
-                case PColor: shapeColor = (string)obj; break;
-                case PFillColor: shapeFillColor = (string)obj; break;
-                case PThickness: shapeThickness = (int)obj; break;
+        internal void SetProp(PropsN num, object obj) {
+            switch (num) {
+            case PName: shapeName = (string) obj; break;
+            case PColor: shapeColor = (string) obj; break;
+            case PFillColor: shapeFillColor = (string) obj; break;
+            case PThickness: shapeThickness = (int) obj; break;
             };
         }
 
-        public bool ValidInput()
-        {
+        public bool ValidInput() {
             foreach (PropsN num in cur_shaper.Props)
                 if (GetProp(num) is ISafe @prop && !@prop.Valid) return false;
             return true;
         }
         public bool ValidName() => !shape_dict.ContainsKey(shapeName);
 
-        private string GenName(string prefix)
-        {
+        private string GenName(string prefix) {
             prefix += " ";
             int n = 1;
-            while (true)
-            {
+            while (true) {
                 string res = prefix + n;
                 if (!shape_dict.ContainsKey(res)) return res;
                 n += 1;
             }
         }
-        public Shape? Create(bool preview)
-        {
+        private void AddShape(Shape newy, string? name = null) {
+            name ??= shapeName;
+
+            shape_dict[name] = newy;
+            var item = new ShapeListBoxItem(name, this);
+            shapes.Add(item);
+            name2shape[name] = item;
+        }
+
+        public Shape? Create(bool preview) {
             Shape? newy = cur_shaper.Build(this);
             if (newy == null) return null;
-            if (preview)
-            {
+            tformer.Transform(newy, preview);
+
+            if (preview) {
                 newy.Name = "marker";
                 return newy;
             }
 
             if (name2shape.TryGetValue(shapeName, out var value)) Remove(value);
 
-            shape_dict[shapeName] = newy;
-            var item = new ShapeListBoxItem(shapeName, this);
-            shapes.Add(item);
-            name2shape[shapeName] = item;
+            AddShape(newy);
 
             newName = GenName(cur_shaper.Name);
             return newy;
         }
 
-        internal void Remove(ShapeListBoxItem item)
-        {
+        internal void Remove(ShapeListBoxItem item) {
             var Name = item.Name;
             if (!shape_dict.ContainsKey(Name)) return;
 
@@ -167,10 +167,8 @@ namespace Paint.Models
             Update();
         }
 
-        public void Clear()
-        {
-            foreach (var item in shape_dict)
-            {
+        public void Clear() {
+            foreach (var item in shape_dict) {
                 var shape = item.Value;
                 if (shape == null || shape.Parent is not Canvas @c) continue;
                 @c.Children.Clear();
@@ -183,86 +181,82 @@ namespace Paint.Models
             Update();
         }
 
-        public void Export(bool is_xml)
-        {
+        public void Export(bool is_xml) {
             List<object> data = new();
-            foreach (var item in shape_dict)
-            {
+            foreach (var item in shape_dict) {
                 var shape = item.Value;
-                foreach (var shaper in Shapers)
-                {
+                bool R = true;
+                foreach (var shaper in Shapers) {
                     var res = shaper.Export(shape);
-                    if (res != null)
-                    {
+                    if (res != null) {
                         res["type"] = shaper.Name;
+
+                        var tform = Transformation.Export(shape);
+                        if (tform.Count > 0) res["transform"] = tform;
+
                         data.Add(res);
+                        R = false;
                         break;
                     }
                 }
+                if (R) Log.Write("Потеряна одна из фигур при экспортировании :/");
             }
-            if (is_xml)
-            {
+            if (is_xml) {
                 var xml = Utils.Obj2xml(data);
-                if (xml == null) { return; }
+                if (xml == null) { Log.Write("Не удалось экспортировать в Export.xml :/"); return; }
                 File.WriteAllText("../../../Export.xml", xml);
-            }
-            else
-            {
+            } else {
                 var json = Utils.Obj2json(data);
-                if (json == null) { return; }
+                if (json == null) { Log.Write("Не удалось экспортировать в Export.json :/"); return; }
                 File.WriteAllText("../../../Export.json", json);
             }
         }
 
-        public Shape[]? Import(bool is_xml)
-        {
+        public Shape[]? Import(bool is_xml) {
             string name = is_xml ? "Export.xml" : "Export.json";
-            if (!File.Exists("../../../" + name)) { return null; }
+            if (!File.Exists("../../../" + name)) { Log.Write(name + " не обнаружен"); return null; }
 
             var data = File.ReadAllText("../../../" + name);
 
             var json = is_xml ? Utils.Xml2obj(data) : Utils.Json2obj(data);
-            if (json is not List<object?> @list) { return null; }
+            if (json is not List<object?> @list) { Log.Write("В начале " + name + " не список"); return null; }
 
             List<Shape> res = new();
             Clear();
 
-            foreach (object? item in @list)
-            {
-                if (item is not Dictionary<string, object?> @dict) { continue; }
+            foreach (object? item in @list) {
+                if (item is not Dictionary<string, object?> @dict) { Log.Write("Одна из фигур при импорте - не словарь"); continue; }
 
-                if (!@dict.ContainsKey("type") || @dict["type"] is not string @type) { continue; }
-                if (!@dict.ContainsKey("name") || @dict["name"] is not string @shapeName) { continue; }
-                if (!TShapers.ContainsKey(@type)) { continue; }
+                if (!@dict.ContainsKey("type") || @dict["type"] is not string @type) { Log.Write("Нет поля type, либо оно - не строка"); continue; }
+                if (!@dict.ContainsKey("name") || @dict["name"] is not string @shapeName) { Log.Write("Нет поля name, либо оно - не строка"); continue; }
+                if (!TShapers.ContainsKey(@type)) { Log.Write("Фигуратор " + @type + " не обнаружен :/"); continue; }
 
                 var shaper = TShapers[@type];
                 var newy = shaper.Import(@dict);
-                if (newy == null) { continue; }
+                if (newy == null) { Log.Write("Не получилось собрть фигуру " + Utils.Obj2json(@dict)); continue; }
 
-                shape_dict[shapeName] = newy;
-                var itemm = new ShapeListBoxItem(shapeName, this);
-                shapes.Add(itemm);
-                name2shape[shapeName] = itemm;
+                if (@dict.TryGetValue("transform", out object? tform))
+                    if (tform is not Dictionary<string, object?> @dict2) Log.Write("У одной из фигур при импорте transform - не словарь");
+                    else Transformation.Import(newy, @dict2);
+                AddShape(newy, shapeName);
 
                 res.Add(newy);
             }
-
+            
             newName = GenName(cur_shaper.Name);
             return res.ToArray();
         }
 
-        public void Select(ShapeListBoxItem? shapeItem)
-        {
+        public void Select(ShapeListBoxItem? shapeItem) {
             if (shapeItem == null) return;
 
             var shape = shape_dict[shapeItem.Name];
             bool yeah = false;
             short n = 0;
-            foreach (var shaper in Shapers)
-            {
+            foreach (var shaper in Shapers) {
                 yeah = shaper.Load(this, shape);
-                if (yeah)
-                {
+                if (yeah) {
+                    tformer.Disassemble(shape);
                     update_name_lock = true;
                     select_shaper = n;
                     Update();
@@ -271,28 +265,25 @@ namespace Paint.Models
                 }
                 n++;
             }
+            if (!yeah) Log.Write("Не удалось распаковать фигуру :/");
         }
 
-        public ShapeListBoxItem? ShapeTap(string name)
-        {
+        public ShapeListBoxItem? ShapeTap(string name) {
             if (name.StartsWith("sn_")) name = name[3..];
             else if (name.StartsWith("sn|")) name = Utils.Base64Decode(name.Split('|')[1]);
             else return null;
 
-            if (name2shape.TryGetValue(name, out var item))
-            {
+            if (name2shape.TryGetValue(name, out var item)) {
                 Select(item);
                 return item;
             }
             return null;
         }
 
-        private void Update()
-        {
+        private void Update() {
             UPD?.Invoke(INST);
         }
-        private static void Update(object? me)
-        {
+        private static void Update(object? me) {
             if (me != null && me is Mapper @map) @map.Update();
         }
     }
